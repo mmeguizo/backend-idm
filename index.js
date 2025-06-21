@@ -59,7 +59,7 @@ app.use(express.urlencoded({ limit: "20mb", extended: false }));
 app.use(allowCrossDomain);
 
 //for deployment on hosting and build
-app.use(express.static(path.join(__dirname, "dist")));
+// app.use(express.static(path.join(__dirname, "dist")));
 app.use("/images", express.static(path.join(__dirname, "./images")));
 app.use("/uploads", express.static(path.join(__dirname, "../uploads/files")));
 //api routes
