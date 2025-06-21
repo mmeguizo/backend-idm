@@ -85,9 +85,15 @@ app.use(
   express.static(path.join(__dirname, "../uploads/images"))
 );
 
+// app.get("*", (req, res) => {
+//   res.sendFile(path.join(__dirname, "dist", "index.html"));
+// });
+
+
 app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "dist", "index.html"));
+  res.sendFile(path.join(__dirname, "index.html"));
 });
+
 
 const servers = app.listen(PORT, () => {
   console.log("Connected on port " + PORT);
