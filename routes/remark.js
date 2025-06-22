@@ -51,6 +51,10 @@ module.exports = (router) => {
       const savedRemark = await newRemark.save();
       const objective = await Objectives.find({ id : savedRemark.objectiveId});
       const goalDetails = await Goal.find({ id : objective[0].goalId});
+
+
+      console.log({savedRemark, objective, goalDetails});
+
       await Notifications.create({
         userId: req.decoded.id,
         message: `New remark added to objective`,

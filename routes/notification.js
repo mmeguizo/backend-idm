@@ -70,6 +70,8 @@ module.exports = (router) => {
 
   router.get("/getNotificationsByRole", async (req, res) => {
     const { role, id } = req.decoded;
+    console.log("Role:", role);
+    console.log("User ID:", id);
 
     try {
       let userIds = [];
@@ -149,6 +151,7 @@ module.exports = (router) => {
 
       // Different matching conditions based on role
       let matchCondition;
+      console.log("User IDs under supervision:", userIds);
       
       if (role === "office-head") {
         // Office heads only see notifications where they are directly involved
@@ -187,6 +190,12 @@ module.exports = (router) => {
             as: "from",
           },
         },
+         {
+          $unwind: {
+            path: "$from",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
         {
           $lookup: {
             from: "users",
@@ -201,12 +210,7 @@ module.exports = (router) => {
             preserveNullAndEmptyArrays: true,
           },
         },
-        {
-          $unwind: {
-            path: "$from",
-            preserveNullAndEmptyArrays: true,
-          },
-        },
+       
         // {
         //   $addFields: {
         //     from: {
@@ -243,6 +247,7 @@ module.exports = (router) => {
         //   },
         // },
       ]).sort({ createdAt: -1, isRead: 1 });
+      
 
       res.status(200).json({ success: true, notifications });
     } catch (error) {
