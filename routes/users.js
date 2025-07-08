@@ -155,24 +155,36 @@ module.exports = (router) => {
   //   ).sort({ _id: -1 });
   // });
 
-  router.get("/getAllUsersAdminDepartments", (req, res) => {
-    User.find(
-      { deleted: false },
-      { id: 1, email: 1, username: 1, department: 1, role: 1, status: 1 },
-      (err, users) => {
-        if (err) {
-          res.json({ success: false, message: err });
-        } else {
-          if (!users) {
-            res.json({ success: false, message: "No User found." });
-          } else {
-            res.json({ success: true, users: users });
-          }
-        }
-      }
-    ).sort({ _id: -1 });
-  });
+  router.get("/getAllUsersAdminDepartments", async (req, res) => {
+    try {
+      const users = await User.find(
+        { deleted: false },
+        { id: 1, email: 1, username: 1, department: 1, role: 1, status: 1 }
+      ).sort({ _id: -1 });
 
+      if (!users || users.length === 0) {
+        return res.json({ success: false, message: "No User found." });
+      }
+
+      // Format data for PrimeNG dropdown
+      const formattedUsers = users.map((user) => ({
+        name: user.username || user.email, // Use username or fallback to email
+        code: user.id, // Use id as the code
+        // Include additional data that may be needed
+        email: user.email,
+        department: user.department,
+        role: user.role,
+        status: user.status,
+      }));
+
+      return res.json({
+        success: true,
+        users: formattedUsers,
+      });
+    } catch (err) {
+      return res.json({ success: false, message: err.message });
+    }
+  });
 
   router.get("/getAllUsersExceptLoggedIn/:id", (req, res) => {
     User.find(
@@ -231,14 +243,13 @@ module.exports = (router) => {
       !password ||
       !firstname ||
       !lastname ||
-      !department ||
       !role ||
       password !== confirm
     ) {
       return res.json({
         success: false,
         message:
-          "You must provide an email, username, department,firstname , lastname, role, password and matching password",
+          "You must provide an email, username, firstname, lastname, role, password and matching password",
       });
     }
 
@@ -249,11 +260,11 @@ module.exports = (router) => {
       email: req.body.email.toLowerCase(),
       username: req.body.username.toLowerCase(),
       password: req.body.password,
-      department: req.body.department,
-      department_id: req.body.department_id,
-      vice_president_name: req.body?.vice_president_name || " ",
-      vice_president_id: req.body?.vice_president_id || " ",
-      director_name: req.body.director_name || " ",
+      department: req.body.department || "",
+      department_id: req.body.department_id || "",
+      vice_president_name: req.body?.vice_president_name || "",
+      vice_president_id: req.body?.vice_president_id || "",
+      director_name: req.body.director_name || "",
       director_id: req.body?.director_id || "",
       campus: req.body.campus,
       role: req.body.role.toLowerCase(),
@@ -261,53 +272,75 @@ module.exports = (router) => {
 
     User.create(userData)
       .then((data) => {
-        Department.create({
-          id: uuidv4(),
-          department: req.body.department,
-          department_head: req.body.username,
-          user_id: req.body.id,
-          campus: req.body.campus,
-        })
-          .then((data) => {
-            res.json({
-              success: true,
-              message: "This user is successfully Registered ",
-              data: {
-                email,
-                firstname,
-                lastname,
-                username,
-                department,
-                role,
-              },
-            });
+        console.log(data);
+        if (data.department) {
+          Department.create({
+            id: uuidv4(),
+            department: req.body.department,
+            department_head: req.body.username,
+            user_id: req.body.id,
+            campus: req.body.campus,
           })
-          .catch((err) => {
-            res.json({
-              success: false,
-              message: "Could not save user Error : " + err,
+            .then((data) => {
+              res.json({
+                success: true,
+                message: "This user is successfully Registered ",
+                data: {
+                  email,
+                  firstname,
+                  lastname,
+                  username,
+                  department,
+                  role,
+                },
+              });
+            })
+            .catch((err) => {
+              res.json({
+                success: false,
+                message: "Could not save user Error : " + err,
+              });
             });
-          });
+        }
+        return res.json({
+          success: true,
+          message: "This user is successfully Registered ",
+          data: {
+            email,
+            firstname,
+            lastname,
+            username,
+            department,
+            role,
+          },
+        });
       })
       .catch((err) => {
-        if (err.code === 11000) {
+        console.log(err);
+        if (err) {
           res.json({
             success: false,
             message: "User name or Email already exists ",
             err: err.message,
           });
-        } else if (err.errors) {
-          //for specific error email,username and password
-          const errors = Object.keys(err.errors);
-          res.json({ success: false, message: err.errors[errors[0]].message });
-        } else {
-          Department;
-
-          res.json({
-            success: false,
-            message: "Could not save user Error : " + err,
-          });
         }
+
+        // if (err.code === 11000) {
+        // res.json({
+        //   success: false,
+        //   message: "User name or Email already exists ",
+        //   err: err.message,
+        // });
+        // } else if (err.errors) {
+        //   //for specific error email,username and password
+        //   const errors = Object.keys(err.errors);
+        //   res.json({ success: false, message: err.errors[errors[0]].message });
+        // } else {
+        //   res.json({
+        //     success: false,
+        //     message: "Could not save user Error : " + err,
+        //   });
+        // }
       });
   });
 

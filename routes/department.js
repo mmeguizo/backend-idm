@@ -107,7 +107,7 @@ module.exports = (router) => {
     // );
   });
 
-  router.post("/findDepartmentById", (req, res) => {
+  router.post("/findDepartmentById", async (req, res) => {
     Department.findOne(
       { id: req.body.id },
       "-deleted -__v",
@@ -134,7 +134,7 @@ module.exports = (router) => {
     // );
   });
 
-  router.post("/addDepartment", (req, res) => {
+  router.post("/addDepartment", async (req, res) => {
     const { department } = req.body;
 
     console.log(department);
@@ -149,13 +149,21 @@ module.exports = (router) => {
     const departmentData = {
       id: uuidv4(),
       department: department.departmentName.toLowerCase(),
-      department_head: department.department_head.name.toLowerCase(),
-      user_id: department.department_head.code.toLowerCase(),
     };
 
-    const existingDepartment = Department.findOne({
-      department: departmentData.department,
+    // Add department_head and user_id only if they are provided
+    if (department.department_head && department.department_head.name) {
+      departmentData.department_head = department.department_head.name.toLowerCase();
+    }
+    
+    if (department.department_head && department.department_head.code) {
+      departmentData.user_id = department.department_head.code.toLowerCase();
+    }
+
+    const existingDepartment = await Department.findOne({
+      department: department.department,
     });
+    console.log('Existing Department:', JSON.stringify(existingDepartment, null, 2));
 
     if (existingDepartment) {
       return res.json({
