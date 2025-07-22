@@ -2,6 +2,7 @@ const Department = require("../models/department"); // Import Department Model S
 const { v4: uuidv4 } = require("uuid");
 const mongoose = require("mongoose");
 const { logger } = require("../middleware/logger");
+const User = require("../models/user"); // Add User model import
 
 module.exports = (router) => {
   router.get(
@@ -137,9 +138,9 @@ module.exports = (router) => {
   router.post("/addDepartment", async (req, res) => {
     const { department } = req.body;
 
-    console.log(department);
+    console.log({addDepartment :department});
 
-    if (!department) {
+    if (!department.departmentName || department.departmentName.trim() === '') {
       return res.json({
         success: false,
         message: "You must provide an Department Name",
@@ -149,6 +150,9 @@ module.exports = (router) => {
     const departmentData = {
       id: uuidv4(),
       department: department.departmentName.toLowerCase(),
+      department_head : '',
+      user_id : '',
+      
     };
 
     // Add department_head and user_id only if they are provided
@@ -173,13 +177,41 @@ module.exports = (router) => {
     }
 
     Department.create(departmentData)
-      .then((data) =>
-        res.json({
-          success: true,
-          message: "This department is successfully Added ",
-          data: { department: data.department },
-        })
-      )
+      .then((data) => {
+        console.log({ departmentDatacreate: data });
+        
+        // Update the department head user with the new department information
+        User.findOneAndUpdate(
+          { id: data.user_id }, // Find user by department_head username
+          {
+            department: data.department,
+            department_id: data.id
+          },
+          { new: true }
+        )
+          .then(updatedUser => {
+            console.log('Department head updated:', updatedUser);
+            res.json({
+              success: true,
+              message: "This department is successfully Added and department head updated",
+              data: { 
+                department: data.department,
+                departmentId: data.id,
+                updatedUser: updatedUser ? updatedUser.username : 'User not found'
+              },
+            });
+          })
+          .catch(userErr => {
+            console.error('Error updating department head:', userErr);
+            // Still return success for department creation even if user update fails
+            res.json({
+              success: true,
+              message: "Department created but failed to update department head",
+              data: { department: data.department, departmentId: data.id },
+              warning: "Could not update department head: " + userErr.message
+            });
+          });
+      })
       .catch((err) => {
         if (err.code === 11000) {
           res.json({
@@ -414,11 +446,36 @@ module.exports = (router) => {
         (err, response) => {
           if (err) return res.json({ success: false, message: err.message });
           if (response) {
-            res.json({
-              success: true,
-              message: "Department Information has been updated!",
-              data: response,
-            });
+            // Update the department head user with the new department information
+            User.findOneAndUpdate(
+              { username: department.department_head }, // Find user by department_head username
+              {
+                department: department.department,
+                department_id: id // Use the department id from the update
+              },
+              { new: true }
+            )
+              .then(updatedUser => {
+                console.log('Department head updated:', updatedUser);
+                res.json({
+                  success: true,
+                  message: "Department Information has been updated and department head updated!",
+                  data: {
+                    department: response,
+                    updatedUser: updatedUser ? updatedUser.username : 'User not found'
+                  },
+                });
+              })
+              .catch(userErr => {
+                console.error('Error updating department head:', userErr);
+                // Still return success for department update even if user update fails
+                res.json({
+                  success: true,
+                  message: "Department updated but failed to update department head",
+                  data: response,
+                  warning: "Could not update department head: " + userErr.message
+                });
+              });
           } else {
             res.json({
               success: true,

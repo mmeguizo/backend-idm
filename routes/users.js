@@ -276,19 +276,28 @@ module.exports = (router) => {
 
     User.create(userData)
       .then((data) => {
-        console.log(data);
+        console.log({ userData: data });
+        console.log({ usreCreate: data });
+
+        // Check if userData has department id
         if (data.department) {
-          Department.create({
-            id: uuidv4(),
-            department: req.body.department,
-            department_head: req.body.username,
-            user_id: req.body.id,
-            campus: req.body.campus,
-          })
-            .then((data) => {
+          // Update existing department
+          Department.findOneAndUpdate(
+            { id: data.department_id },
+            {
+              department: data.department,
+              department_head: data.username,
+              user_id: data.id, // Using the created user's ID
+              campus: req.body.campus,
+            },
+            { new: true }
+          )
+            .then((departmentData) => {
+              console.log({ departmentData });
               res.json({
                 success: true,
-                message: "This user is successfully Registered ",
+                message:
+                  "This user is successfully Registered and department updated",
                 data: {
                   email,
                   firstname,
@@ -302,22 +311,23 @@ module.exports = (router) => {
             .catch((err) => {
               res.json({
                 success: false,
-                message: "Could not save user Error : " + err,
+                message: "Could not update department Error : " + err,
               });
             });
+        } else {
+          return res.json({
+            success: true,
+            message: "This user is successfully Registered ",
+            data: {
+              email,
+              firstname,
+              lastname,
+              username,
+              department,
+              role,
+            },
+          });
         }
-        return res.json({
-          success: true,
-          message: "This user is successfully Registered ",
-          data: {
-            email,
-            firstname,
-            lastname,
-            username,
-            department,
-            role,
-          },
-        });
       })
       .catch((err) => {
         console.log(err);
@@ -328,23 +338,6 @@ module.exports = (router) => {
             err: err.message,
           });
         }
-
-        // if (err.code === 11000) {
-        // res.json({
-        //   success: false,
-        //   message: "User name or Email already exists ",
-        //   err: err.message,
-        // });
-        // } else if (err.errors) {
-        //   //for specific error email,username and password
-        //   const errors = Object.keys(err.errors);
-        //   res.json({ success: false, message: err.errors[errors[0]].message });
-        // } else {
-        //   res.json({
-        //     success: false,
-        //     message: "Could not save user Error : " + err,
-        //   });
-        // }
       });
   });
 
@@ -479,7 +472,7 @@ module.exports = (router) => {
         req.body.role = "admin";
       }
 
-      let requestBody = { role, ...restData } = req.body
+      let requestBody = ({ role, ...restData } = req.body);
 
       const response = await User.findOneAndUpdate(
         { id: data.id },
@@ -528,9 +521,9 @@ module.exports = (router) => {
         const hashedPassword = await hash.encryptPassword(data.password);
         data.password = hashedPassword;
       }
-      
-      if(req.body.role === 'president'){
-        req.body.role = 'admin'
+
+      if (req.body.role === "president") {
+        req.body.role = "admin";
       }
 
       const response = await User.findOneAndUpdate(
